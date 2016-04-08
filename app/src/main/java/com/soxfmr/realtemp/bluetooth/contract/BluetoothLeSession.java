@@ -12,6 +12,10 @@ import java.util.List;
  */
 public interface BluetoothLeSession {
 
+    void disconnect();
+
+    void setBluetoothGatt(BluetoothGatt gatt);
+
     BluetoothGatt getBluetoothGatt();
 
     /**

@@ -1,5 +1,6 @@
 package com.soxfmr.realtemp.adapter;
 
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -9,7 +10,6 @@ import android.widget.BaseAdapter;
 import android.widget.TextView;
 
 import com.soxfmr.realtemp.R;
-import com.soxfmr.realtemp.model.BluetoothDevice;
 import com.soxfmr.realtemp.utils.GattHelper;
 
 import java.util.List;
@@ -60,7 +60,7 @@ public class BluetoothDeviceAdapter extends BaseAdapter {
             viewHolder = new ViewHolder();
             viewHolder.tvBrand = (TextView) convertView.findViewById(R.id.device_info_brand);
             viewHolder.tvName = (TextView) convertView.findViewById(R.id.device_info_tv_name);
-            viewHolder.tvMacAddr = (TextView) convertView.findViewById(R.id.device_info_tv_mac);
+            viewHolder.tvAddress = (TextView) convertView.findViewById(R.id.device_info_tv_mac);
             viewHolder.tvStatus = (TextView) convertView.findViewById(R.id.device_info_tv_status);
 
             convertView.setTag(viewHolder);
@@ -71,8 +71,8 @@ public class BluetoothDeviceAdapter extends BaseAdapter {
         BluetoothDevice device = mBluetoothDeviceList.get(position);
         viewHolder.tvBrand.setText(TextUtils.substring(device.getName().toUpperCase(), 0, 1));
         viewHolder.tvName.setText(device.getName());
-        viewHolder.tvMacAddr.setText(device.getMacAddress());
-        viewHolder.tvStatus.setText(GattHelper.getStatusText(device.getStatus()));
+        viewHolder.tvAddress.setText(device.getAddress());
+        viewHolder.tvStatus.setText(GattHelper.getStatusText(device.getBondState()));
 
         return convertView;
     }
@@ -80,7 +80,7 @@ public class BluetoothDeviceAdapter extends BaseAdapter {
     private final class ViewHolder {
         public TextView tvBrand;
         public TextView tvName;
-        public TextView tvMacAddr;
+        public TextView tvAddress;
         public TextView tvStatus;
     }
 }

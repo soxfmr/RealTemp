@@ -1,5 +1,6 @@
 package com.soxfmr.realtemp.ui;
 
+import android.bluetooth.BluetoothDevice;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
@@ -12,7 +13,6 @@ import android.widget.ListView;
 import com.jaeger.library.StatusBarUtil;
 import com.soxfmr.realtemp.R;
 import com.soxfmr.realtemp.adapter.BluetoothDeviceAdapter;
-import com.soxfmr.realtemp.model.BluetoothDevice;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +44,6 @@ public class DeviceActivity extends AppCompatActivity {
 
     private void setupDeviceListView() {
         mDeviceListView = (ListView) findViewById(R.id.device_listview_device);
-
 
         mBluetoothDeviceList = new ArrayList<>();
         mBluetoothDeviceAdapter = new BluetoothDeviceAdapter(this, mBluetoothDeviceList);

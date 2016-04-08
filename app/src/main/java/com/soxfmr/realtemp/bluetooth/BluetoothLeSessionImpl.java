@@ -23,7 +23,7 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
     private List<BluetoothGattCharacteristic> mCharacteristicList;
     private List<BluetoothGattDescriptor> mDescriptorList;
 
-    private BluetoothLeSessionImpl(BluetoothGatt bluetoothGatt) {
+    public BluetoothLeSessionImpl(BluetoothGatt bluetoothGatt) {
         mBluetoothGatt = bluetoothGatt;
 
         mServiceList = new ArrayList<>();
@@ -51,6 +51,24 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
                 mCharacteristicList.add(characteristic);
             }
         }
+    }
+
+    @Override
+    public void disconnect() {
+        try {
+            if (mBluetoothGatt != null) {
+                mBluetoothGatt.disconnect();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        mBluetoothGatt = null;
+    }
+
+    @Override
+    public void setBluetoothGatt(BluetoothGatt gatt) {
+        mBluetoothGatt = gatt;
     }
 
     @Override
