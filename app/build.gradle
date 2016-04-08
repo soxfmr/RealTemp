@@ -28,4 +28,5 @@ dependencies {
     compile 'com.jaeger.statusbaruitl:library:1.0.0'
     compile 'com.wada811:android-material-design-colors:2.0.0'
     compile 'de.hdodenhof:circleimageview:2.0.0'
+    compile 'com.github.lzyzsd:circleprogress:1.1.0@aar'
 }
