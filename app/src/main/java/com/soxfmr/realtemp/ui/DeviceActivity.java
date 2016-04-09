@@ -170,7 +170,7 @@ public class DeviceActivity extends AppCompatActivity {
 
     private void setupSwipeRefreshLayout() {
         mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.device_swipe_refresh_layout);
-        mSwipeRefreshLayout.setColorSchemeColors(android.R.color.holo_blue_bright,
+        mSwipeRefreshLayout.setColorSchemeResources(android.R.color.holo_blue_bright,
                 android.R.color.holo_green_light,
                 android.R.color.holo_orange_light,
                 android.R.color.holo_red_light);

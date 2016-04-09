@@ -30,7 +30,7 @@ public class GattHelper {
         return BOND_STATUS_UNKNOWN;
     }
 
-    public static UUID buildServiceUUID(String vendor) {
+    public static UUID buildBaseServiceUUID(String vendor) {
         if (TextUtils.isEmpty(vendor) || vendor.length() != 4) {
             return null;
         }

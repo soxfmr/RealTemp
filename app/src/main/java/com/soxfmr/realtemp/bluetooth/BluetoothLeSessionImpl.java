@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.util.Log;
 
 import com.soxfmr.realtemp.bluetooth.contract.BluetoothLeSession;
 import com.soxfmr.realtemp.utils.GattHelper;
@@ -12,10 +13,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static com.soxfmr.realtemp.utils.DebugUtils.DEG;
+
 /**
  * Created by Soxfmr@gmail.com on 2016/4/9.
  */
 public class BluetoothLeSessionImpl implements BluetoothLeSession {
+    public static final String TAG = BluetoothLeSessionImpl.class.getName();
 
     private BluetoothGatt mBluetoothGatt;
 
@@ -72,7 +76,7 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
     public void destroy() {
         try {
             if (mBluetoothGatt != null) {
-                mBluetoothGatt.disconnect();
+                mBluetoothGatt.close();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -80,14 +84,6 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
 
         mOutOfLife = true;
         mBluetoothGatt = null;
-    }
-
-    @Override
-    public void setBluetoothGatt(BluetoothGatt gatt) {
-        mBluetoothGatt = gatt;
-        mServiceList = null;
-
-        reset();
     }
 
     @Override
@@ -118,11 +114,49 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
     }
 
     @Override
+    public BluetoothGattService getService(UUID uuid) {
+        if (mServiceList == null)
+            return null;
+
+        for (BluetoothGattService service : mServiceList) {
+            if (service.getUuid().equals(uuid)) {
+                return service;
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public BluetoothGattCharacteristic getCharacteristic(UUID uuid) {
+        for (BluetoothGattCharacteristic characteristic : mCharacteristicList) {
+            if (characteristic.getUuid().equals(uuid)) {
+                return characteristic;
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public BluetoothGattDescriptor getDescriptor(UUID uuid) {
+        for (BluetoothGattDescriptor descriptor : mDescriptorList) {
+            if (descriptor.getUuid().equals(uuid)) {
+                return descriptor;
+            }
+        }
+
+        return null;
+    }
+
+    @Override
     public void write(BluetoothGattCharacteristic characteristic) {
         if (mBluetoothGatt == null || characteristic == null)
             return;
 
         mBluetoothGatt.writeCharacteristic(characteristic);
+
+        if(DEG) Log.d(TAG, "Characteristic write.");
     }
 
     @Override
@@ -132,6 +166,8 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
 
         characteristic.setValue(value);
         mBluetoothGatt.writeCharacteristic(characteristic);
+
+        if(DEG) Log.d(TAG, "Characteristic write.");
     }
 
     @Override
@@ -157,6 +193,8 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
             return;
 
         mBluetoothGatt.readCharacteristic(characteristic);
+
+        if(DEG) Log.d(TAG, "Characteristic read.");
     }
 
     @Override
@@ -176,7 +214,7 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
 
         bRet = mBluetoothGatt.setCharacteristicNotification(characteristic, enable);
         if (bRet) {
-            UUID uuid = GattHelper.buildServiceUUID(GattHelper.BASE_SERVICE_NOTIFY);
+            UUID uuid = GattHelper.buildBaseServiceUUID(GattHelper.BASE_SERVICE_NOTIFY);
             // We should reset the CCCD for the notify function
             BluetoothGattDescriptor descriptor = characteristic.getDescriptor(uuid);
             if (descriptor != null) {

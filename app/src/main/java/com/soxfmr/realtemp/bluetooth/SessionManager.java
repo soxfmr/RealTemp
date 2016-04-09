@@ -21,6 +21,7 @@ public class SessionManager {
 
     private Context mContext;
     private BluetoothLeSession mSession;
+    private BluetoothGatt mBluetoothGatt;
 
     private boolean bAutoConnect;
 
@@ -44,8 +45,7 @@ public class SessionManager {
         }
 
         bAutoConnect = autoConnect;
-
-        device.connectGatt(mContext, bAutoConnect, mBluetoothGattCallback);
+        mBluetoothGatt = device.connectGatt(mContext, bAutoConnect, mBluetoothGattCallback);
     }
 
     public BluetoothLeSessionListener getBluetoothLeSessionListener() {
@@ -69,16 +69,13 @@ public class SessionManager {
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             switch (newState) {
                 case BluetoothGatt.STATE_CONNECTED:
-                    if (mSession == null) {
-                        mSession = new BluetoothLeSessionImpl();
-                    }
-
-                    mSession.setBluetoothGatt(gatt);
-                    gatt.discoverServices();
+                    mSession = new BluetoothLeSessionImpl(mBluetoothGatt);
 
                     if (mBluetoothLeSessionListener != null) {
                         mBluetoothLeSessionListener.onConnect(mSession);
                     }
+
+                    gatt.discoverServices();
 
                     if (DEG) Log.d(TAG, "Session created for " + gatt.getDevice().getName());
                     break;
@@ -90,8 +87,6 @@ public class SessionManager {
                         if (unexpected && bAutoConnect) {
                             gatt.connect();
                         }
-                        // Reset the device instance
-                        mSession.setBluetoothGatt(null);
                     }
 
                     if (mBluetoothLeSessionListener != null) {
@@ -116,11 +111,21 @@ public class SessionManager {
 
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            if (mBluetoothLeSessionListener != null) {
+            if (status == BluetoothGatt.GATT_SUCCESS && mBluetoothLeSessionListener != null) {
                 mBluetoothLeSessionListener.onReceive(characteristic);
             }
 
             super.onCharacteristicRead(gatt, characteristic, status);
+        }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+            if (mBluetoothLeSessionListener != null) {
+                mBluetoothLeSessionListener.onReceive(characteristic);
+            }
+
+            if (DEG) Log.d(TAG, "Characteristic value changed.");
+            super.onCharacteristicChanged(gatt, characteristic);
         }
 
         @Override

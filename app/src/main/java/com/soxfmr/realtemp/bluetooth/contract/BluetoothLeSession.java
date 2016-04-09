@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Created by Soxfmr@gmail.com on 2016/4/9.
@@ -15,8 +16,6 @@ public interface BluetoothLeSession {
     boolean isClosed();
 
     void destroy();
-
-    void setBluetoothGatt(BluetoothGatt gatt);
 
     BluetoothGatt getBluetoothGatt();
 
@@ -43,6 +42,12 @@ public interface BluetoothLeSession {
      * @return
      */
     List<BluetoothGattDescriptor> getBluetoothGattDescriptorList();
+
+    BluetoothGattService getService(UUID uuid);
+
+    BluetoothGattCharacteristic getCharacteristic(UUID uuid);
+
+    BluetoothGattDescriptor getDescriptor(UUID uuid);
 
     /**
      * Update the value of the characteristic to the remove server asynchronously
