@@ -26,7 +26,15 @@ public class SessionManager {
 
     private BluetoothLeSessionListener mBluetoothLeSessionListener;
 
+    public SessionManager() {
+        this(null);
+    }
+
     public SessionManager(Context context) {
+        mContext = context;
+    }
+
+    public void setContext(Context context) {
         mContext = context;
     }
 
@@ -59,7 +67,7 @@ public class SessionManager {
     private final BluetoothGattCallback mBluetoothGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            switch (status) {
+            switch (newState) {
                 case BluetoothGatt.STATE_CONNECTED:
                     if (mSession == null) {
                         mSession = new BluetoothLeSessionImpl();
@@ -75,13 +83,16 @@ public class SessionManager {
                     if (DEG) Log.d(TAG, "Session created for " + gatt.getDevice().getName());
                     break;
                 case BluetoothGatt.STATE_DISCONNECTED:
-                    boolean unexpected = ! mSession.isClosed();
-                    // No closed by the user, then recovery the session if the flag of auto connection is true
-                    if (unexpected && bAutoConnect) {
-                        gatt.connect();
+                    boolean unexpected = true;
+                    if (mSession != null) {
+                        unexpected = ! mSession.isClosed();
+                        // No closed by the user, then recovery the session if the flag of auto connection is true
+                        if (unexpected && bAutoConnect) {
+                            gatt.connect();
+                        }
+                        // Reset the device instance
+                        mSession.setBluetoothGatt(null);
                     }
-                    // Reset the device instance
-                    mSession.setBluetoothGatt(null);
 
                     if (mBluetoothLeSessionListener != null) {
                         mBluetoothLeSessionListener.onDisconnect(unexpected);

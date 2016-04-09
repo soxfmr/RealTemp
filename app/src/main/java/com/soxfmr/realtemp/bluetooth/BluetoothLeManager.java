@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Handler;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.soxfmr.realtemp.bluetooth.contract.BluetoothBondStatusListener;
@@ -57,6 +58,7 @@ public class BluetoothLeManager {
 
     public void setContext(Context context) {
         this.mContext = context;
+        mSessionManager.setContext(context);
     }
 
     public void setBluetoothAdapter(BluetoothAdapter adapter) {
@@ -116,19 +118,22 @@ public class BluetoothLeManager {
     }
 
     public void startScan(long timeout) {
-        if (mBluetoothAdapter == null)
+        if (mBluetoothAdapter == null || isScanning() || !isEnable())
             return;
+
+        mScanning = true;
 
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                stopScan();
+                // Still not cancelled by user
+                if (mScanning) {
+                    stopScan();
+                }
             }
         }, timeout);
 
         mBluetoothAdapter.startLeScan(mLeScanCallback);
-
-        mScanning = true;
 
         if (mBluetoothLeScanListener != null) {
             mBluetoothLeScanListener.onStartScan();
@@ -136,7 +141,7 @@ public class BluetoothLeManager {
     }
 
     public void stopScan() {
-        if (mBluetoothAdapter == null)
+        if (mBluetoothAdapter == null || !isEnable())
             return;
 
         mBluetoothAdapter.stopLeScan(mLeScanCallback);
@@ -149,6 +154,20 @@ public class BluetoothLeManager {
     }
 
     public boolean bond(BluetoothDevice device) {
+        if (device == null)
+            return false;
+
+        return device.createBond();
+    }
+
+    public boolean bond(BluetoothDevice device, String pinCode) {
+        if (device == null)
+            return false;
+
+        if (! TextUtils.isEmpty(pinCode)) {
+            device.setPin(pinCode.getBytes());
+        }
+
         return device.createBond();
     }
 

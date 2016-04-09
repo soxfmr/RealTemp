@@ -1,17 +1,21 @@
 package com.soxfmr.realtemp.ui;
 
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.AdapterView;
@@ -22,9 +26,11 @@ import com.jaeger.library.StatusBarUtil;
 import com.soxfmr.realtemp.R;
 import com.soxfmr.realtemp.adapter.BluetoothDeviceAdapter;
 import com.soxfmr.realtemp.bluetooth.BluetoothLeManager;
+import com.soxfmr.realtemp.bluetooth.SessionManager;
 import com.soxfmr.realtemp.bluetooth.contract.BluetoothBondStatusListener;
 import com.soxfmr.realtemp.bluetooth.contract.BluetoothLeScanListener;
-import com.soxfmr.realtemp.bluetooth.contract.BluetoothStatusListener;
+import com.soxfmr.realtemp.bluetooth.contract.BluetoothLeSession;
+import com.soxfmr.realtemp.bluetooth.contract.BluetoothLeSessionListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,9 +44,12 @@ public class DeviceActivity extends AppCompatActivity {
     private List<BluetoothDevice> mBluetoothDeviceList;
     private BluetoothDeviceAdapter mBluetoothDeviceAdapter;
 
+    private BluetoothDevice mBluetoothDevice;
     private BluetoothLeManager mBluetoothLeManager;
 
     private long scanningTimeout = 10000;
+    private long connectTimeout = 10000;
+    private boolean bAutoConnect = false;
 
     private final Handler mHandler = new Handler();
 
@@ -62,29 +71,24 @@ public class DeviceActivity extends AppCompatActivity {
         setupDeviceListView();
         setupSwipeRefreshLayout();
 
-        StatusBarUtil.setColor(this, getResources().getColor(R.color.colorPrimary));
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT) {
+            StatusBarUtil.setColor(this, getResources().getColor(R.color.colorPrimary));
+        }
 
         final BluetoothManager manager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothLeManager = BluetoothLeManager.getInstance();
-        mBluetoothLeManager.setContext(getApplicationContext());
+        mBluetoothLeManager.setContext(this);
         mBluetoothLeManager.setBluetoothAdapter(manager.getAdapter());
-
-        mBluetoothLeManager.setBluetoothStatusListener(new BluetoothStatusListener() {
-            @Override
-            public void onEnable() {
-
-            }
-
-            @Override
-            public void onDisable() {
-
-            }
-        });
 
         mBluetoothLeManager.setBluetoothBondStatusListener(new BluetoothBondStatusListener() {
             @Override
             public void onBonded(BluetoothDevice device) {
                 mBluetoothDeviceAdapter.notifyDataSetChanged();
+
+                if (mBluetoothDevice != null &&
+                        mBluetoothDevice.getAddress().equals(device.getAddress())) {
+                    createSession(device);
+                }
             }
 
             @Override
@@ -130,9 +134,15 @@ public class DeviceActivity extends AppCompatActivity {
 
                 if (device.getBondState() == BluetoothDevice.BOND_NONE) {
                     mBluetoothLeManager.bond(device);
+                    // latest device to be bond
+                    mBluetoothDevice = device;
+                    return;
                 }
+
+                createSession(device);
             }
         });
+
         mDeviceListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
@@ -164,9 +174,55 @@ public class DeviceActivity extends AppCompatActivity {
         mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
+                if (! mBluetoothLeManager.isEnable()) {
+                    mBluetoothLeManager.enable();
+                    mSwipeRefreshLayout.setRefreshing(false);
+                    return;
+                }
                 mBluetoothLeManager.startScan(scanningTimeout);
             }
         });
+    }
+
+    private void createSession(BluetoothDevice device) {
+        // Progress dialog
+        final ProgressDialog dialog = new ProgressDialog(DeviceActivity.this);
+        dialog.setMessage(getString(R.string.device_bluetooth_try_to_create_session));
+
+        // Start the Bluetooth session
+        SessionManager sessionManager = mBluetoothLeManager.getSessionManager();
+        sessionManager.setBluetoothLeSessionListener(new BluetoothLeSessionListener() {
+            @Override
+            public void onConnect(BluetoothLeSession session) {
+                dialog.dismiss();
+                // Session created, move on to MainActivity
+                Intent intent = new Intent(DeviceActivity.this, MainActivity.class);
+                startActivity(intent);
+                finish();
+            }
+
+            @Override
+            public void onDisconnect(boolean unexpected) {}
+
+            @Override
+            public void onReceive(BluetoothGattCharacteristic characteristic) {}
+
+            @Override
+            public void onReceive(BluetoothGattDescriptor descriptor) {}
+        });
+        sessionManager.create(device, bAutoConnect);
+        dialog.show();
+
+        // Connect timeout
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                dialog.dismiss();
+
+                Toast.makeText(DeviceActivity.this, R.string.device_bluetooth_connect_timeout,
+                        Toast.LENGTH_SHORT).show();
+            }
+        }, connectTimeout);
     }
 
     @Override
