@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.util.Log;
 
@@ -17,6 +18,9 @@ import com.soxfmr.realtemp.bluetooth.contract.BluetoothLeScanListener;
 import com.soxfmr.realtemp.bluetooth.contract.BluetoothLeSession;
 import com.soxfmr.realtemp.bluetooth.contract.BluetoothLeSessionListener;
 import com.soxfmr.realtemp.bluetooth.contract.BluetoothStatusListener;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import static com.soxfmr.realtemp.utils.DebugUtils.DEG;
 
@@ -36,6 +40,8 @@ public class BluetoothLeManager {
     private BluetoothStatusListener mBluetoothStatusListener;
     private BluetoothBondStatusListener mBluetoothBondStatusListener;
     private BluetoothLeScanListener mBluetoothLeScanListener;
+
+    private boolean mScanning = false;
 
     private BluetoothLeManager() {
         mSessionManager = new SessionManager(mContext);
@@ -65,6 +71,10 @@ public class BluetoothLeManager {
         return mSessionManager;
     }
 
+    public boolean isScanning() {
+        return mScanning;
+    }
+
     /**
      * The listener for the status of the Bluetooth device
      * @param l
@@ -89,6 +99,22 @@ public class BluetoothLeManager {
         this.mBluetoothLeScanListener = l;
     }
 
+    public boolean isEnable() {
+        if (mBluetoothAdapter == null)
+            return false;
+
+        return mBluetoothAdapter.isEnabled();
+    }
+
+    public void enable() {
+        Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+        mContext.startActivity(intent);
+    }
+
+    public void disable() {
+        mBluetoothAdapter.disable();
+    }
+
     public void startScan(long timeout) {
         if (mBluetoothAdapter == null)
             return;
@@ -102,6 +128,8 @@ public class BluetoothLeManager {
 
         mBluetoothAdapter.startLeScan(mLeScanCallback);
 
+        mScanning = true;
+
         if (mBluetoothLeScanListener != null) {
             mBluetoothLeScanListener.onStartScan();
         }
@@ -113,9 +141,30 @@ public class BluetoothLeManager {
 
         mBluetoothAdapter.stopLeScan(mLeScanCallback);
 
+        mScanning = false;
+
         if (mBluetoothLeScanListener != null) {
             mBluetoothLeScanListener.onStopScan();
         }
+    }
+
+    public boolean bond(BluetoothDevice device) {
+        return device.createBond();
+    }
+
+    public boolean unbound(BluetoothDevice device) {
+        boolean bRet = false;
+        try {
+            Method method = BluetoothDevice.class.getMethod("removeBond", null);
+            bRet = (boolean) method.invoke(device);
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return bRet;
     }
 
     public void register() {
@@ -183,9 +232,15 @@ public class BluetoothLeManager {
                     switch (status) {
                         case BluetoothDevice.BOND_BONDED:
                             mBluetoothBondStatusListener.onBonded(device);
+
+                            if (DEG) Log.d(TAG, String.format("Bluetooth device bond status change: %s, MAC: %s",
+                                    device.getName(), device.getAddress()));
                             break;
                         case BluetoothDevice.BOND_NONE:
                             mBluetoothBondStatusListener.onUnBond(device);
+
+                            if (DEG) Log.d(TAG, String.format("Bluetooth device bond status change: %s, MAC: %s",
+                                    device.getName(), device.getAddress()));
                             break;
                         default:break;
                     }
