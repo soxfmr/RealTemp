@@ -23,6 +23,12 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
     private List<BluetoothGattCharacteristic> mCharacteristicList;
     private List<BluetoothGattDescriptor> mDescriptorList;
 
+    private boolean mOutOfLife = false;
+
+    public BluetoothLeSessionImpl() {
+        this(null);
+    }
+
     public BluetoothLeSessionImpl(BluetoothGatt bluetoothGatt) {
         mBluetoothGatt = bluetoothGatt;
 
@@ -31,12 +37,16 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
         mDescriptorList = new ArrayList<>();
     }
 
+    private void reset() {
+        mCharacteristicList.clear();
+        mDescriptorList.clear();
+    }
+
     private void loadService() {
         if (mServiceList == null || mServiceList.size() == 0)
             return;
 
-        mCharacteristicList.clear();
-        mDescriptorList.clear();
+        reset();
 
         for (BluetoothGattService service : mServiceList) {
             List<BluetoothGattCharacteristic> characteristics = service.getCharacteristics();
@@ -54,7 +64,12 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
     }
 
     @Override
-    public void disconnect() {
+    public boolean isClosed() {
+        return mOutOfLife;
+    }
+
+    @Override
+    public void destroy() {
         try {
             if (mBluetoothGatt != null) {
                 mBluetoothGatt.disconnect();
@@ -63,12 +78,16 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
             e.printStackTrace();
         }
 
+        mOutOfLife = true;
         mBluetoothGatt = null;
     }
 
     @Override
     public void setBluetoothGatt(BluetoothGatt gatt) {
         mBluetoothGatt = gatt;
+        mServiceList = null;
+
+        reset();
     }
 
     @Override

@@ -36,10 +36,9 @@ public class BluetoothLeManager {
     private BluetoothStatusListener mBluetoothStatusListener;
     private BluetoothBondStatusListener mBluetoothBondStatusListener;
     private BluetoothLeScanListener mBluetoothLeScanListener;
-    private BluetoothLeSessionListener mBluetoothLeSessionListener;
 
     private BluetoothLeManager() {
-        mSessionManager = new SessionManager();
+        mSessionManager = new SessionManager(mContext);
     }
 
     public static BluetoothLeManager getInstance() {
@@ -60,6 +59,10 @@ public class BluetoothLeManager {
 
     public BluetoothAdapter getBluetoothAdapter() {
         return mBluetoothAdapter;
+    }
+
+    public SessionManager getSessionManager() {
+        return mSessionManager;
     }
 
     /**
@@ -84,10 +87,6 @@ public class BluetoothLeManager {
      */
     public void setBluetoothLeScanListener(BluetoothLeScanListener l) {
         this.mBluetoothLeScanListener = l;
-    }
-
-    public void setBluetoothLeSessionListener(BluetoothLeSessionListener l) {
-        this.mBluetoothLeSessionListener = l;
     }
 
     public void startScan(long timeout) {
@@ -119,14 +118,7 @@ public class BluetoothLeManager {
         }
     }
 
-    public void connect(BluetoothDevice device) {
-        if (mContext == null || device == null)
-            return;
-
-        device.connectGatt(mContext, false, mBluetoothGattCallback);
-    }
-
-    public void init() {
+    public void register() {
         IntentFilter intentFilter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
         intentFilter.addAction(android.bluetooth.BluetoothDevice.ACTION_BOND_STATE_CHANGED);
 
@@ -137,64 +129,13 @@ public class BluetoothLeManager {
         }
     }
 
-    public void release() {
+    public void unregister() {
         if (mContext != null) {
             mContext.unregisterReceiver(mBluetoothStatusReceiver);
 
             if (DEG) Log.d(TAG, "Unregister the receiver for the Bluetooth status.");
         }
     }
-
-    public BluetoothLeSession getCurrentSession() {
-        return mSessionManager.getSession();
-    }
-
-    private final BluetoothGattCallback mBluetoothGattCallback = new BluetoothGattCallback() {
-        @Override
-        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            BluetoothLeSession session;
-            switch (status) {
-                case BluetoothGatt.STATE_CONNECTED:
-                    session = new BluetoothLeSessionImpl(gatt);
-                    // Store the current session
-                    mSessionManager.setSession(session);
-
-                    if (mBluetoothLeSessionListener != null) {
-                        mBluetoothLeSessionListener.onConnect(session);
-                    }
-
-                    gatt.discoverServices();
-                    break;
-                case BluetoothGatt.STATE_DISCONNECTED:
-                    session = getCurrentSession();
-                    // Release the session
-                    mSessionManager.release();
-
-                    if (mBluetoothLeSessionListener != null) {
-                        mBluetoothLeSessionListener.onDisconnect(session);
-                    }
-
-                    break;
-            }
-            super.onConnectionStateChange(gatt, status, newState);
-        }
-
-        @Override
-        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-            BluetoothLeSession session = getCurrentSession();
-            if (session != null) {
-                session.setBluetoothGatt(gatt);
-                session.loadService(gatt.getServices());
-            }
-
-            super.onServicesDiscovered(gatt, status);
-        }
-
-        @Override
-        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            super.onCharacteristicRead(gatt, characteristic, status);
-        }
-    };
 
     private final BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
         @Override
