@@ -174,7 +174,8 @@ public class BluetoothLeManager {
     public boolean unbound(BluetoothDevice device) {
         boolean bRet = false;
         try {
-            Method method = BluetoothDevice.class.getMethod("removeBond", null);
+            Class<?>[] params = null;
+            Method method = BluetoothDevice.class.getMethod("removeBond", params);
             bRet = (boolean) method.invoke(device);
         } catch (NoSuchMethodException e) {
             e.printStackTrace();

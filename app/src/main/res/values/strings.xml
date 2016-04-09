@@ -8,6 +8,11 @@
     <string name="device_bluetooth_try_to_create_session">正在创建会话，请稍后&#8230;</string>
     <string name="device_bluetooth_connect_timeout">连接超时，重试一下吧</string>
     
+    <string name="main_temperature_symbol">℃</string>
+    <string name="main_temperature_label">温度</string>
+
     <string name="common_dialog_confirm">确认</string>
     <string name="common_dialog_cancel">取消</string>
+    <string name="common_drawer_open">drawer_open</string>
+    <string name="common_drawer_close">drawer_close</string>
 </resources>
