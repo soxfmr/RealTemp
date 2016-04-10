@@ -7,7 +7,7 @@
     <string name="device_bluetooth_scan_finish">扫描已完成</string>
     <string name="device_bluetooth_try_to_create_session">正在创建会话，请稍后&#8230;</string>
     <string name="device_bluetooth_connect_timeout">连接超时，重试一下吧</string>
-    
+
     <string name="main_temperature_symbol">℃</string>
     <string name="main_temperature_label">温度</string>
 

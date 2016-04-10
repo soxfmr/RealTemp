@@ -11,20 +11,11 @@ import com.soxfmr.realtemp.utils.GattHelper;
 public class BluetoothService extends Service {
     public static final String TAG = BluetoothService.class.getName();
 
-    private static final int MAX_TIMEOUT_COUNT = 5;
+    public final static byte[] SEND_INSTRUCTIONS = { 0x4F, 0x4B, 0x2B, 0x04, 0x12, 0x16, 0x54 };
 
-    private static final byte[] READ_HEART_RATE_INSTRUCTION = { 0x4F, 0x4B, 0x2B, 0x04, 0x12, 0x16, 0x54 };
+    BluetoothGattCharacteristic characteristic;
 
-    public static final String ACTION_HEART_BEAT_PACKET = "heart_beat";
-    public static final String ACTION_DESTROY_SESSION = "destroy_session";
-
-    private BluetoothLeSession mBluetoothLeSession;
-
-    private static boolean RUN = false;
-    private static int timeoutCounter = 0;
-    public static boolean WAIT_READ_FLAG = false;
-
-    private BluetoothGattCharacteristic mHeartRateCharacteristic;
+    private static boolean RUN = true;
 
     public BluetoothService() {}
 
@@ -40,70 +31,44 @@ public class BluetoothService extends Service {
 
             SessionManager sessionManager = BluetoothLeManager.getInstance()
                     .getSessionManager();
-            mBluetoothLeSession = sessionManager.getSession();
+            final BluetoothLeSession session = sessionManager.getSession();
+            if (session != null) {
+                RUN = true;
+                characteristic = session.getCharacteristic(GattHelper.BASE_SERVICE_HEART_RATE_MEASURE);
+                 session.enableNotification(characteristic, true);
 
-            if (action.equals(ACTION_HEART_BEAT_PACKET)) {
-                if (mBluetoothLeSession != null) {
-                    RUN = true;
-                    // Enable the notification
-                    mHeartRateCharacteristic = mBluetoothLeSession.getCharacteristic(
-                            GattHelper.buildBaseServiceUUID(GattHelper.BASE_SERVICE_HEART_RATE_MEASURE)
-                    );
-                    mBluetoothLeSession.enableNotification(mHeartRateCharacteristic, true);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            while (RUN) {
+                                session.write(characteristic, SEND_INSTRUCTIONS);
+                                Thread.sleep(2000);
+                            }
+                        } catch (InterruptedException e) {}
+                    }
+                }).start();
 
-                    Thread heartBeatThread = new HeartBeatThread();
-                    Thread receiveThread = new ReceiveThread();
-
-                    heartBeatThread.start();
-                    receiveThread.start();
-                }
-
-            } else if (action.equals(ACTION_DESTROY_SESSION)) {
-                if (mBluetoothLeSession != null && ! mBluetoothLeSession.isClosed()) {
-                    RUN = false;
-                    mBluetoothLeSession.destroy();
-                }
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            while (RUN) {
+                                session.read(characteristic);
+                                Thread.sleep(2000);
+                            }
+                        } catch (InterruptedException e) {}
+                    }
+                }).start();
             }
         }
 
         return super.onStartCommand(intent, flags, startId);
     }
 
-    private class HeartBeatThread extends Thread {
-
-        @Override
-        public void run() {
-            while (RUN) {
-                try {
-                    if (! WAIT_READ_FLAG || timeoutCounter++ >= MAX_TIMEOUT_COUNT) {
-                        mBluetoothLeSession.write(mHeartRateCharacteristic, READ_HEART_RATE_INSTRUCTION);
-
-                        timeoutCounter = 0;
-                        WAIT_READ_FLAG = true;
-                    }
-                    Thread.currentThread().sleep(1000);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-    }
-
-    private class ReceiveThread extends Thread {
-
-        @Override
-        public void run() {
-            while (RUN) {
-                try {
-                    if (WAIT_READ_FLAG) {
-                        mBluetoothLeSession.read(mHeartRateCharacteristic);
-                    }
-                    Thread.currentThread().sleep(500);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
+    @Override
+    public void onDestroy() {
+        RUN = false;
+        super.onDestroy();
     }
 }

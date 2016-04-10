@@ -1,7 +1,6 @@
 package com.soxfmr.realtemp.utils;
 
 import android.bluetooth.BluetoothDevice;
-import android.text.TextUtils;
 
 import java.util.UUID;
 
@@ -9,10 +8,8 @@ import java.util.UUID;
  * Created by Soxfmr@gmail.com on 2016/4/9.
  */
 public class GattHelper {
-    private static final String BASE_SERVICE_FORMAT = "0000%s-0000-1000-8000-00805f9b34fb";
-
-    public static final String BASE_SERVICE_NOTIFY = "2902";
-    public static final String BASE_SERVICE_HEART_RATE_MEASURE = "ffe1";
+    public static final UUID BASE_SERVICE_NOTIFY = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+    public static final UUID BASE_SERVICE_HEART_RATE_MEASURE = UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb");
 
     public static final String BOND_STATUS_BONDED = "已配对";
     public static final String BOND_STATUS_NONE = "未配对";
@@ -29,13 +26,4 @@ public class GattHelper {
 
         return BOND_STATUS_UNKNOWN;
     }
-
-    public static UUID buildBaseServiceUUID(String vendor) {
-        if (TextUtils.isEmpty(vendor) || vendor.length() != 4) {
-            return null;
-        }
-
-        return UUID.fromString(String.format(BASE_SERVICE_FORMAT, vendor));
-    }
-
 }

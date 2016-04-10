@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
@@ -13,6 +14,7 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.jaeger.library.StatusBarUtil;
 import com.soxfmr.realtemp.R;
@@ -25,11 +27,16 @@ import com.soxfmr.realtemp.bluetooth.contract.BluetoothLeSessionListener;
 import com.soxfmr.realtemp.model.ScheduleInfo;
 import com.soxfmr.realtemp.view.MaruisProgress;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     public static final String TAG = MainActivity.class.getName();
+
+    private static final int MSG_CHANGE_PROGRESS = 0x2;
 
     private Toolbar mToolbar;
     private DrawerLayout mDrawerLayout;
@@ -41,7 +48,18 @@ public class MainActivity extends AppCompatActivity {
     private ScheduleAdapter mScheduleAdapter;
     private List<ScheduleInfo> mScheduleInfoList;
 
-    private final Handler mHandler = new Handler();
+    private final Handler mHandler = new Handler() {
+
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case MSG_CHANGE_PROGRESS:
+                    mMaruisProgress.setProgress(msg.arg1);
+                    break;
+            }
+            super.handleMessage(msg);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,20 +87,45 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceive(BluetoothGattCharacteristic characteristic) {
                 byte[] value = characteristic.getValue();
-                if (value != null) {
-                    for (int i = 0; i < value.length; i++) {
-                        Log.w(TAG, value[i] + "");
+                if (value != null && value.length == 5) {
+                    final int temperature = value[4] * 100 + value[3] * 10 + value[2];
+                    final int progress = mMaruisProgress.getProgress();
+                    if (temperature > progress) {
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    for (int i = progress; i <= temperature; i++) {
+                                        mHandler.obtainMessage(MSG_CHANGE_PROGRESS, i, 0).sendToTarget();
+                                        Thread.sleep(80);
+                                    }
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }).start();
+                    } else if (temperature < progress) {
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    for (int i = progress; i >= temperature; i--) {
+                                        mHandler.obtainMessage(MSG_CHANGE_PROGRESS, i, 0).sendToTarget();
+                                        Thread.sleep(80);
+                                    }
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }).start();
                     }
-                    BluetoothService.WAIT_READ_FLAG = false;
                 }
-            }
 
-            @Override
-            public void onReceive(BluetoothGattDescriptor descriptor) {}
+                Log.w(TAG, "Characteristic read " + Arrays.toString(characteristic.getValue()));
+            }
         });
 
         Intent intent = new Intent(this, BluetoothService.class);
-        intent.setAction(BluetoothService.ACTION_HEART_BEAT_PACKET);
         startService(intent);
     }
 
@@ -112,6 +155,13 @@ public class MainActivity extends AppCompatActivity {
         mScheduleListView = (ListView) findViewById(R.id.main_lv_schedule);
 
         mScheduleInfoList = new ArrayList<>();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        for (int i = 0, len = 20; i < len; i++) {
+            ScheduleInfo info = new ScheduleInfo();
+            info.setTitle("Schedule " + i);
+            info.setTriggeredAt(dateFormat.format(new Date()));
+            mScheduleInfoList.add(info);
+        }
         mScheduleAdapter = new ScheduleAdapter(this, mScheduleInfoList);
 
         mScheduleListView.addHeaderView(headerView);
@@ -121,7 +171,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void finish() {
         Intent intent = new Intent(this, BluetoothService.class);
-        intent.setAction(BluetoothService.ACTION_DESTROY_SESSION);
         stopService(intent);
 
         super.finish();

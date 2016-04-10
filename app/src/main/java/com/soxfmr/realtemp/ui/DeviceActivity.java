@@ -49,7 +49,7 @@ public class DeviceActivity extends AppCompatActivity {
 
     private long scanningTimeout = 10000;
     private long connectTimeout = 10000;
-    private boolean bAutoConnect = false;
+    private boolean bAutoConnect = true;
 
     private final Handler mHandler = new Handler();
 
@@ -209,9 +209,6 @@ public class DeviceActivity extends AppCompatActivity {
 
             @Override
             public void onReceive(BluetoothGattCharacteristic characteristic) {}
-
-            @Override
-            public void onReceive(BluetoothGattDescriptor descriptor) {}
         });
         sessionManager.create(device, bAutoConnect);
         dialog.show();

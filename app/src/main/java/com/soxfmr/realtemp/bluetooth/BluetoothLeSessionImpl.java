@@ -214,9 +214,8 @@ public class BluetoothLeSessionImpl implements BluetoothLeSession {
 
         bRet = mBluetoothGatt.setCharacteristicNotification(characteristic, enable);
         if (bRet) {
-            UUID uuid = GattHelper.buildBaseServiceUUID(GattHelper.BASE_SERVICE_NOTIFY);
             // We should reset the CCCD for the notify function
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(uuid);
+            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(GattHelper.BASE_SERVICE_NOTIFY);
             if (descriptor != null) {
                 descriptor.setValue(enable ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
                         : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
